@@ -1,6 +1,6 @@
 # coding=utf-8
 from GameState import GameState
-from BrainDQN import BrainDQN
+from algorithm.BrainDQN import BrainDQN
 from connectMysql import OrderMysql, RouteMysql, RecordMysql, MoneyMysql, GameRecordMysql, MeanMysql
 import numpy as np
 import random
