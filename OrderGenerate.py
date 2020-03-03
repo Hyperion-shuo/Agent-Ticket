@@ -12,20 +12,21 @@ def OrderGenerator(data, mode):
     order_list = []
     order_price = -1
     if mode == 1:
-        for i in range(1,87):
+        for i in range(87):
             have_order = np.random.randint(0, 3)
             if have_order == 0:
-                order_price = np.min(np.hstack((np.average(data[:i]), data[i]))) - np.random.randint(0, 50)
+                order_price = np.min(np.hstack((np.average(data[:i+1]), data[i]))) - np.random.randint(0, 50)
+                # order_price = 1877
             else:
                 order_price = -1
             order_list.append(order_price)
 
 
     elif mode == 2:
-        for i in range(1,87):
+        for i in range(87):
             have_order = np.random.randint(0, 3)
             if have_order == 0:
-                order_price = np.min(np.hstack((np.average(data[:i]), data[i]))) * ((0.95 - 0.7) * np.random.sample() + 0.7)
+                order_price = np.min(np.hstack((np.average(data[:i+1]), data[i]))) * ((0.95 - 0.7) * np.random.sample() + 0.7)
             else:
                 order_price = -1
             order_list.append(order_price)
@@ -52,6 +53,9 @@ def readRoute(filename):
         return result
 
 if __name__ == "__main__":
-    route_list = readRoute("./wang/data/route")
-    print(len(OrderGenerator(route_list[21],1)))
+    # route_list = readRoute("./wang/data/route")
+    # print(len(OrderGenerator(route_list[21],1)))
     # print(route_list[21][:0])
+    a = [1,2,3,4,5,6,7,8,9]
+    a = [s**2  for s in a  if s>5]
+    print(a)

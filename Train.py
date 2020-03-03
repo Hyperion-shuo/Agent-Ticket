@@ -22,7 +22,7 @@ class TikcetPlay():
         self.routeline = []
         self.allRoute = readRoute("./wang/data/route")
         self.env = Env(self.allRoute, history_take_off=1, order_num=1)
-        self.epsilon = 0.
+        self.epsilon = 0.5
 
     def transcate_AC(self):
         total_steps = 0  # 记录步数，一天是一步
@@ -38,7 +38,7 @@ class TikcetPlay():
             prob_clip=0.,
         )
         gameNum = 0 #记录游戏轮数
-        ex_steps = 500 #探索衰减的轮数
+        ex_steps = 100 #探索衰减的轮数
         epsilon = self.epsilon
         reward_list = [0] #存储每次的收益，来计算baseline
         Loss_list = [] #存储训练过程中的损失值
@@ -61,7 +61,7 @@ class TikcetPlay():
             while terminal == False:
                 today = self.env.getTodayIndex()
                 # 当前状态
-                state_tf = np.mat(state[1][0])
+                state_tf = state[1][0]
                 # print(state_tf,len(state_tf))
                 # 由神经网络选择行动
                 if random.random()<epsilon and isExploration == False:
@@ -79,20 +79,24 @@ class TikcetPlay():
                 else:
                     #action from learning
                     action,p = brain.choose_action(state_tf, today)
+
                     tao_prob.append(p)
-                if today >= 0:
-                    wait_day.append(today)
+
                 # 订单字典 历史曲线 reward
                 next_state,reward,terminal,_ = self.env.SeparateStep(1, [action])
+                today = self.env.getTodayIndex()
                 tao_reward.append(reward)
-                # 订单完成或者到最后一天
                 state_ = next_state[1][0]
-                td_error = brain.criticLearn(state_tf, reward[1], state_)
-                baseline = td_error
-                profitAdvanced_list.append(td_error[0][0])
-                loss = brain.actorLearn(state_tf, action, td_error)
-                # print(loss)
-                Loss_list.append(loss)
+
+                if today >= 0:
+                    wait_day.append(today)
+                    td_error = brain.criticLearn(state_tf, reward[1], state_)
+                    baseline = td_error
+                    profitAdvanced_list.append(td_error[0][0])
+                    loss = brain.actorLearn(state_tf, action, td_error)
+                    # print(loss)
+                    Loss_list.append(loss)
+
                 # 保存记录到记忆库
                 # print("this is store arg:",state_tf,";", action,";", reward,";", env.getTodayIndex())
                 # brain.store_transition(state_tf, action, reward, env.getTodayIndex())
@@ -105,8 +109,8 @@ class TikcetPlay():
                 state = next_state
 
             # 一局的总收益
-            epsilon = self.epsilon*(ex_steps/500)
-            print("epsilon:",epsilon)
+            epsilon = self.epsilon*(ex_steps/100)
+            print("epsilon:",ex_steps)
             print("TD_Error:",baseline)
             profit = self.env.getTotalReward()
             profit_list.append(profit)
@@ -154,6 +158,8 @@ class TikcetPlay():
         f.write("wait_day:" + str(wait_day) + "\n")
         f.write("########################" + str(gameNum) + "###########################\n")
         f.flush()
+
+
 
 if __name__ == "__main__":
     P = TikcetPlay()
