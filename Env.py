@@ -102,13 +102,15 @@ class Env():
                 self.order_left -= 1
                 reward_accept = self.getAcceptReward(accpet_act)
 
-        reward_buy = self.getBuyReward(buy_act, self.orders)
+
         if len(self.orders)==len(buy_act):
+            reward_buy = self.getBuyReward(buy_act, self.orders)
             for i in range(len(buy_act)):
                 if buy_act[i] == 1 :
-                    profit = reward_buy
-                    self.profit += profit
+
                     self.orders.pop(i)
+            profit = reward_buy
+            self.profit += profit
 
         self.his_accept.append(order_accept)
 
