@@ -37,8 +37,14 @@ class Env():
                 if self.today + j < 87:
                     self.his_price[i, self.today + j] = self.data[self.routeId - i][self.today + j]
 
+        state = {}
+        state['buy_ticket_value'] = self.buy_ticket_value
+        state['his_price'] = self.his_price
+        state['his_order'] = self.his_order
+        state['his_accept'] = self.his_accept
+        state['orders'] = self.orders
 
-        return (self.buy_ticket_value, self.his_price, self.his_order, self.his_accept)
+        return state, self.done
 
     def step(self, act):
         """
@@ -67,20 +73,28 @@ class Env():
 
         self.his_accept.append(order_accept)
 
-
         if self.today >= 86 or (len(self.orders) == 0 and self.order_left == 0):
             self.done = True
-        self.today += 1
-        self.buy_ticket_value = 0
-        for order in self.orders:
-            self.buy_ticket_value += order - today_price
-        for i in range(self.his_t):
-            if self.today + i < 87:
-                self.his_price[i, self.today + i] = self.data[self.routeId - i][self.today + i]
+        else:
+            # 如果done了，return的state不使用，因此不更新也没事
+            self.today += 1
+            self.buy_ticket_value = 0
+            for order in self.orders:
+                self.buy_ticket_value += order - today_price
+            for i in range(self.his_t):
+                if self.today + i < 87:
+                    self.his_price[i, self.today + i] = self.data[self.routeId - i][self.today + i]
 
-        return (self.buy_ticket_value, self.his_price, self.his_order, self.his_accept), reward, self.done, info
+        state = {}
+        state['buy_ticket_value'] = self.buy_ticket_value
+        state['his_price'] = self.his_price
+        state['his_order'] = self.his_order
+        state['his_accept'] = self.his_accept
+        state['orders'] = self.orders
 
-    def SeparateStep(self, accpet_act, buy_act):
+        return state, reward, self.done, info
+
+    def separateStep(self, accpet_act, buy_act):
         '''
         :param accpet_act: 0 hold, 1 accept order
         :param buy_act: a list for each orders action, 0 hold, 1 buy
@@ -117,15 +131,27 @@ class Env():
 
         if self.today >= 86 or (len(self.orders) == 0 and self.order_left == 0):
             self.done = True
-        self.today += 1
-        self.buy_ticket_value = 0
-        for order in self.orders:
-            self.buy_ticket_value += order - today_price
-        for i in range(self.his_t):
-            if self.today + i < 87:
-                self.his_price[i, self.today + i] = self.data[self.routeId - i][self.today + i]
+        else :
+            self.today += 1
+            self.buy_ticket_value = 0
+            for order in self.orders:
+                self.buy_ticket_value += order - today_price
+            for i in range(self.his_t):
+                if self.today + i < 87:
+                    self.his_price[i, self.today + i] = self.data[self.routeId - i][self.today + i]
 
-        return (self.buy_ticket_value, self.his_price, self.his_order, self.his_accept), (reward_accept,reward_buy), self.done, info
+        state = {}
+        state['buy_ticket_value'] = self.buy_ticket_value
+        state['his_price'] = self.his_price
+        state['his_order'] = self.his_order
+        state['his_accept'] = self.his_accept
+        state['orders'] = self.orders
+
+        reward = {}
+        reward['reward_accept'] = reward_accept
+        reward['reward_buy'] = reward_buy
+
+        return state, reward, self.done, info
 
     def render(self):
         print(f'Day: {self.today}')
@@ -159,7 +185,7 @@ class Env():
             for order in orders:
                 reward += order - today_price
         self.totalReward += reward
-        return  reward
+        return reward
 
     def getTotalReward(self):
         return self.totalReward

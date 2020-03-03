@@ -1,5 +1,6 @@
 from Env import Env
 from algorithm.BrainAC import ActorCritic
+from algorithm.BrainDQN import BrainDQN
 from OrderGenerate import OrderGenerator, readRoute
 import numpy as np
 import random
@@ -17,14 +18,14 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 
 class TikcetPlay():
-    def __init__(self):
+    def __init__(self, history_take_off=1, order_num=1):
         self.order = []
         self.routeline = []
         self.allRoute = readRoute("./wang/data/route")
-        self.env = Env(self.allRoute, history_take_off=1, order_num=1)
+        self.env = Env(self.allRoute, history_take_off=history_take_off, order_num=order_num)
         self.epsilon = 0.
 
-    def transcate_AC(self):
+    def transcation_AC(self):
         total_steps = 0  # 记录步数，一天是一步
         profit_list = []  # 记录每局总收益
         profitAdvanced_list = []
@@ -141,6 +142,33 @@ class TikcetPlay():
             # last_remainder = total_steps % 1000
                 # 存储训练过程
 
+    def train_DQN(self, max_game=300, epsilon=.95):
+        # 初始化RL Brain
+        actions = 2  # 行动个数
+        brain = BrainDQN(actions, prioritized=False)
+        total_steps = 0
+        game_num = 0
+        profit_list, avg_day_list, profit_random_list = [], [], []
+
+        while game_num < max_game:
+            # 初始化游戏
+            game_num += 1
+            obs, done = self.env.reset()
+            day_list, order_finish_day = [], []
+
+            while not done:
+                order_num = len(obs["orders"])
+                action = np.zeros((order_num, 1))
+                for i in range(order_num):
+                    action[i] = brain.getAction(obs["his_price"])
+                obs, reward, done, info = self.env.separateStep(1, action)
+                for i in range(order_num):
+                    brain.store_transition(obs["his_price"], action[i], reward, obs, done)
+                total_steps += 1
+                brain.trainQNetwork()
+
+
+
     def writeHistory(self, filename, epsilon, baseline, total_steps, profit_list, profit, tao_prob, tao_reward,
                      wait_day, gameNum):
         f = open(filename, 'a')
@@ -156,5 +184,7 @@ class TikcetPlay():
         f.flush()
 
 if __name__ == "__main__":
-    P = TikcetPlay()
-    P.transcate_AC()
+    # P = TikcetPlay()
+    # P.transcation_AC()
+    P = TikcetPlay
+    P.train_DQN()

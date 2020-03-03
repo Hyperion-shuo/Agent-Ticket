@@ -122,7 +122,7 @@ class Memory(object):
 class BrainDQN:
     def __init__(self,
                  actions,
-                 prioritized = False):
+                 prioritized=False):
         # 初始化epsilon、行动个数
         self.epsilon = INITIAL_EPSILON
         self.INITIAL_EPSILON = INITIAL_EPSILON
