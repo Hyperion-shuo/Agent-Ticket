@@ -6,13 +6,13 @@ def OrderGenerator(data, mode):
     :param mode: 1，2 两个难度，2更难
     :return: 长为87的订单list 有订单的日期对应数值为订单价格， 没订单的日期对应-1
 
-    订单的日期分布是没天1/5概率产生新订单
+    订单的日期分布是每天1/3概率产生新订单
     """
 
     order_list = []
     order_price = -1
     if mode == 1:
-        for i in range(87):
+        for i in range(1,87):
             have_order = np.random.randint(0, 3)
             if have_order == 0:
                 order_price = np.min(np.hstack((np.average(data[:i]), data[i]))) - np.random.randint(0, 50)
@@ -22,7 +22,7 @@ def OrderGenerator(data, mode):
 
 
     elif mode == 2:
-        for i in range(87):
+        for i in range(1,87):
             have_order = np.random.randint(0, 3)
             if have_order == 0:
                 order_price = np.min(np.hstack((np.average(data[:i]), data[i]))) * ((0.95 - 0.7) * np.random.sample() + 0.7)
@@ -53,6 +53,5 @@ def readRoute(filename):
 
 if __name__ == "__main__":
     route_list = readRoute("./wang/data/route")
-    print(type(route_list))
-    print(len(route_list[0]))
-    print(route_list[1])
+    print(len(OrderGenerator(route_list[21],1)))
+    # print(route_list[21][:0])
