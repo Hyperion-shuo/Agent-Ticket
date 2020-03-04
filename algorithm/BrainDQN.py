@@ -10,7 +10,7 @@ EXPLORE = 10000.
 EXPLORE1 = 5000. # 逐步减小epsilon
 EXPLORE2 = 5000. # 逐步减小epsilon
 FINAL_EPSILON = 0.01 # epsilon的最小值
-INITIAL_EPSILON = 0.99 #  epsilon初始值
+INITIAL_EPSILON = 0.0 #  epsilon初始值
 REPLAY_MEMORY = 10000 # 记忆库容量
 BATCH_SIZE = 32 # 每次取样数
 THRESHOLD = 0.0
@@ -159,7 +159,7 @@ class BrainDQN:
         self.saver = tf.train.Saver()
         self.session = tf.InteractiveSession()
         self.session.run(tf.initialize_all_variables())
-        checkpoint = tf.train.get_checkpoint_state("saved_networks")
+        checkpoint = tf.train.get_checkpoint_state("shen/saved_networks")
         if checkpoint and checkpoint.model_checkpoint_path:
             self.saver.restore(self.session, checkpoint.model_checkpoint_path)
             print("Successfully loaded:", checkpoint.model_checkpoint_path)
@@ -168,7 +168,7 @@ class BrainDQN:
 
     def createQNetwork(self):
         # network weights
-        W_conv1 = self.weight_variable([9, 2, 1, 10])
+        W_conv1 = self.weight_variable([8, 2, 1, 10])
         b_conv1 = self.bias_variable([10])
 
         W_fc1 = self.weight_variable([800, 100])
@@ -178,7 +178,7 @@ class BrainDQN:
         b_fc2 = self.bias_variable([self.n_actions]) # [2]
 
         # input layer
-        stateInput = tf.placeholder("float", [None, 88, 2, 1])
+        stateInput = tf.placeholder("float", [None, 87, 2, 1])
         # 88 x 2 x 1
 
         # hidden layers
@@ -229,7 +229,7 @@ class BrainDQN:
                 self.train_step))
 
         if self.train_step % 10000 == 0:
-            self.saver.save(self.session, 'saved_networks/' + 'network' + '-dqn', global_step=self.train_step)
+            self.saver.save(self.session, 'shen/saved_networks/' + 'network' + '-dqn', global_step=self.train_step)
 
         # Step 1: 从记忆库随机取数据
         if self.prioritized:
@@ -292,7 +292,7 @@ class BrainDQN:
                 plt.xlabel("train_step")
                 plt.ylabel("loss")
                 plt.title("loss with batch_size 32")
-                plt.savefig('./picture/' + "loss" + "_steps_" + str(self.train_step / 10000) + '_.png')
+                plt.savefig('shen/picture/' + "loss" + "_steps_" + str(self.train_step / 10000) + '_.png')
                 plt.cla()
 
             # print("abs_errors", abs_errors)
@@ -335,7 +335,7 @@ class BrainDQN:
                 plt.xlabel("train_step")
                 plt.ylabel("loss")
                 plt.title("loss with batch_size 32")
-                plt.savefig('./picture/' + "loss" + "_steps_" + str(self.train_step / 10000) + '_.png')
+                plt.savefig('shen/picture/' + "loss" + "_steps_" + str(self.train_step / 10000) + '_.png')
                 plt.cla()
 
         self.train_step += 1
@@ -348,14 +348,14 @@ class BrainDQN:
             self.epsilon -= (self.INITIAL_EPSILON - THRESHOLD) / EXPLORE1  # 开始先强制多探索
         else:
             self.epsilon -= (self.INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE2 # 再正常衰减
-            '''
+        '''
 
     def getAction(self, observation, day):
         # 统一 observation 的 shape (1, size_of_observation)
         # 解决Cannot feed value of shape (88, 2, 1) for Tensor 'Placeholder:0', which has shape '(?, 88, 2, 1)'
         observation = observation[np.newaxis, :] # 本来第一维为样本数， 单次估计则为1 ，要加上那一维
         action = np.zeros(self.n_actions)
-        '''
+
         if np.random.uniform() < self.epsilon: # 0.9 -> 0.001
             # 随机选择
             action_index = random.randrange(0, 10, 1)
@@ -365,22 +365,19 @@ class BrainDQN:
                 action_index = 0
             # action_index = 0
         else:
-        '''
-        # 让 eval_net 神经网络生成所有 action 的值, 并选择值最大的 action
-        QValue = self.QValue.eval(feed_dict={self.stateInput: observation})[0] # 等价于 session.run(QValue)
-        action_index = np.argmax(QValue)
+            # 让 eval_net 神经网络生成所有 action 的值, 并选择值最大的 action
+            QValue = self.QValue.eval(feed_dict={self.stateInput: observation})[0] # 等价于 session.run(QValue)
+            action_index = np.argmax(QValue)
         if day >= 87:
             action_index = 1
 
         # 选择网络选的动作
         action[action_index] = 1
 
-
         # 输出打印出来  同时存到txt中
         # QValue = self.QValue.eval(feed_dict={self.stateInput: observation})[0]
         # print('QValue:'+str(QValue) + " action:" + str(action_index) + " day:"+str(day) + " epsilon:%.3f" % self.epsilon)
         # self.file.write('QValue:'+str(QValue) + " action:" + str(action_index) + " day:"+str(day) + " epsilon:%.3f" % self.epsilon + "\n")
-
 
         return action
 

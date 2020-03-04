@@ -1,5 +1,5 @@
 from Env import Env
-from algorithm.BrainAC import ActorCritic
+# from algorithm.BrainAC import ActorCritic
 from algorithm.BrainDQN import BrainDQN
 from OrderGenerate import OrderGenerator, readRoute
 import numpy as np
@@ -12,10 +12,10 @@ import copy
 import os
 import tensorflow as tf
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-session = tf.Session(config=config)
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth = True
+# session = tf.Session(config=config)
 
 class TikcetPlay():
     def __init__(self, history_take_off=1, order_num=1):
@@ -147,7 +147,7 @@ class TikcetPlay():
             # last_remainder = total_steps % 1000
                 # 存储训练过程
 
-    def train_DQN(self, max_game=300, epsilon=.95):
+    def train_DQN(self, max_game=1000, epsilon=.95):
         # 初始化RL Brain
         actions = 2  # 行动个数
         brain = BrainDQN(actions, prioritized=False)
@@ -159,18 +159,31 @@ class TikcetPlay():
             # 初始化游戏
             game_num += 1
             obs, done = self.env.reset()
+            reward = 0
+            info = {}
             day_list, order_finish_day = [], []
 
             while not done:
+                today = self.env.getTodayIndex() + 1
                 order_num = len(obs["orders"])
-                action = np.zeros((order_num, 1))
+                action = np.zeros(order_num) # order_num为0时长度为0
                 for i in range(order_num):
-                    action[i] = brain.getAction(obs["his_price"])
+                    s = (obs["his_price"] - obs["orders"][i]).reshape((87,2,1))
+                    a = brain.getAction(s, today)
+                    r = obs["orders"][i] - obs["his_price"][0, self.env.getTodayIndex()] if a[1]==1 else 0
+                    # 已经对最后一天做了处理
+                    s_ = (self.env.getNextPrice() - obs["orders"][i]).reshape((87,2,1))
+                    done = True if (self.env.getTodayIndex() >= 86 or a[1] == 1) else False
+                    brain.store_transition(s, a, r, s_, done)
+                    action[i] = a[1]
+                # print("step %d" % total_steps)
+                # print(action)
                 obs, reward, done, info = self.env.separateStep(1, action)
-                for i in range(order_num):
-                    brain.store_transition(obs["his_price"], action[i], reward, obs, done)
+                if len(action) > 0:
+                    print("day %d, action %d， reward %d" % (today, action[0], reward["reward_buy"]))
                 total_steps += 1
-                brain.trainQNetwork()
+                # if total_steps > 100:
+                #     brain.trainQNetwork()
 
 
 
@@ -193,5 +206,6 @@ class TikcetPlay():
 if __name__ == "__main__":
     # P = TikcetPlay()
     # P.transcation_AC()
-    P = TikcetPlay
-    P.train_DQN()
+    P = TikcetPlay(history_take_off=2, order_num=10)
+    P.train_DQN(max_game=1)
+

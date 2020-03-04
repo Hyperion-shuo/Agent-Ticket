@@ -1,13 +1,5 @@
 import numpy as np
 
-class Order(object):
-    def __init__(self, price, maxProfit, avgProfit):
-        self.orderId = 0
-        self.price = price
-        self.isFinished = 0
-        self.profit = 0
-        self.maxProfit = maxProfit
-        self.avgProfit = avgProfit
 
 def OrderGenerator(data, mode):
     """
@@ -30,24 +22,24 @@ def OrderGenerator(data, mode):
             else:
                 order_price = -1
 
-            temp_day = i
-            sum_price_after = 0
-            lowest_price_after = data[i]
-            while temp_day <= 87:
-                today_price = data[i]
-                sum_price_after += today_price  # avg_price 包含今天的价格因为可以选择当天买票
-                if today_price < lowest_price_after:
-                    lowest_price_after = today_price
-                temp_day += 1
-            # sum_price 有today_price 因此分母要加1
-            avg_price_after = sum_price_after / (87 - i + 1)
-            # 读取订单价格、未来最低价，计算最大收益
-            avgProfit = order_price - avg_price_after
-            maxProfit = order_price - lowest_price_after
-
-            order = Order()
+            # temp_day = i
+            # sum_price_after = 0
+            # lowest_price_after = data[i]
+            # while temp_day <= 87:
+            #     today_price = data[i]
+            #     sum_price_after += today_price  # avg_price 包含今天的价格因为可以选择当天买票
+            #     if today_price < lowest_price_after:
+            #         lowest_price_after = today_price
+            #     temp_day += 1
+            # # sum_price 有today_price 因此分母要加1
+            # avg_price_after = sum_price_after / (87 - i + 1)
+            # # 读取订单价格、未来最低价，计算最大收益
+            # avgProfit = order_price - avg_price_after
+            # maxProfit = order_price - lowest_price_after
 
             order_list.append(order_price)
+
+        return order_list
 
 
     elif mode == 2:
