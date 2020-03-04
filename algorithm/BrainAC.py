@@ -40,13 +40,27 @@ class ActorCritic():
         self.sess.run(tf.global_variables_initializer())
 
     def choose_action(self, state, length):
-        return self.actor.choose_action(state, length)
+        stateP = self.statePreprocess(state)
+        return self.actor.choose_action(stateP, length)
 
     def criticLearn(self, state, reward, state_):
-        return self.critic.learn(state, reward, state_)
+        stateP = self.statePreprocess(state)
+        state_P = self.statePreprocess(state_)
+        return self.critic.learn(stateP, reward, state_P)
 
     def actorLearn(self, state, action, td_error):
-        return self.actor.learn(state, action, td_error)
+        stateP = self.statePreprocess(state)
+        return self.actor.learn(stateP, action, td_error)
+
+    def statePreprocess(self,state):
+        exist = np.array([n for n in state if n>0])
+        exist -= 1877.368
+        exist /= 256.61
+        exist = exist.tolist()
+        while len(exist) < 87:
+            exist.append(0)
+        # print("STATE:", self.state,"EXIST:",exist)
+        return exist
 
 class Actor(object):
     def __init__(self, sess, n_features, n_actions, lr=0.001):
@@ -84,11 +98,13 @@ class Actor(object):
             self.train_op = tf.train.AdamOptimizer(lr).minimize(-self.exp_v)  # minimize(-exp_v) = maximize(exp_v)
 
     def learn(self, s, a, td):
+        s = np.mat(s)
         feed_dict = {self.s: s, self.a: a, self.td_error: td}
         _, exp_v = self.sess.run([self.train_op, self.exp_v], feed_dict)
         return exp_v
 
     def choose_action(self, s, length):
+        s = np.mat(s)
         probs = self.sess.run(self.acts_prob, {self.s: s})   # get probabilities for all actions
         # print(probs)
         action = np.random.choice(np.arange(probs.shape[1]), p=probs.ravel())   # return a int
@@ -142,7 +158,7 @@ class Critic(object):
             # s_ = s_[np.newaxis, :]
             v_ = self.sess.run(self.v, {self.s: s_})
             # print("V(S):",v_)
-
+        s = np.mat(s)
 
 
         td_error, _ = self.sess.run([self.td_error, self.train_op],

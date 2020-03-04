@@ -27,8 +27,8 @@ class Env():
         self.his_accept = []
         self.buy_ticket_value = 0
         self.his_price = np.zeros((self.his_t, 87))
-        # self.routeId = np.random.randint(len(self.data))
-        self.routeId =21
+        self.routeId = np.random.randint(len(self.data))
+        # self.routeId =21
         self.order_distribution = OrderGenerator(self.data[self.routeId], self.mode)
         self.totalReward = 0
 
@@ -115,13 +115,19 @@ class Env():
                 order_accept = 1
                 self.order_left -= 1
                 reward_accept = self.getAcceptReward(accpet_act)
-
-
+                # print("Accept:",self.today+1)
+            else:
+                reward_accept = -1
+        if self.today >= 86:
+            if type(buy_act).__name__ == 'list':
+                buy_act = np.ones_like(buy_act)
+            else:
+                buy_act = 1
+        reward_buy = self.getBuyReward(buy_act, self.orders)
         if len(self.orders)==len(buy_act):
-            reward_buy = self.getBuyReward(buy_act, self.orders)
+
             for i in range(len(buy_act)):
                 if buy_act[i] == 1 :
-
                     self.orders.pop(i)
             profit = reward_buy
             self.profit += profit
@@ -175,15 +181,20 @@ class Env():
         reward = 0
         today_price = self.data[self.routeId][self.today]
         if type(act).__name__ == 'list':
-            for i in range(len(orders)):
+            for i in range(len(act)):
                 # print("LOOK:", orders[i], today_price)
                 if act[i] != 0:
-                    reward += orders[i] - today_price
+                    if len(orders) >0:
+                        reward += orders[i] - today_price
+                    else:
+                        reward -= 1
                 else:
                     reward += 0
         elif act != 0 and len(orders) >= 1:
             for order in orders:
                 reward += order - today_price
+        elif act != 0 and len(orders) == 0:
+            reward -= 1
         self.totalReward += reward
         return reward
 
@@ -194,7 +205,7 @@ class Env():
         if self.order_num == self.order_left:
             return -1
         else:
-            return self.today
+            return self.today+1
 
 
 
