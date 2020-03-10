@@ -74,6 +74,7 @@ class Env():
 
         if self.today >= 86 or (len(self.orders) == 0 and self.order_left == 0):
             self.done = True
+            self.today += 1
         else:
             # 如果done了，return的state不使用，因此不更新也没事
             self.today += 1
@@ -144,6 +145,7 @@ class Env():
 
         if self.today >= 86 or (len(self.orders) == 0 and self.order_left == 0):
             self.done = True
+            self.today += 1
         else :
             self.today += 1
             self.buy_ticket_value = 0
