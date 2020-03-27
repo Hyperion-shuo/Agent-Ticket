@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 
 # Hyper Parameters:
 GAMMA = 0.99 # 奖励衰减值
-EXPLORE = 10000.
+EXPLORE = 20000.
 EXPLORE1 = 5000. # 逐步减小epsilon
 EXPLORE2 = 5000. # 逐步减小epsilon
 FINAL_EPSILON = 0.01 # epsilon的最小值
-INITIAL_EPSILON = 0.0 #  epsilon初始值
+INITIAL_EPSILON = 0.01 #  epsilon初始值
 REPLAY_MEMORY = 10000 # 记忆库容量
 BATCH_SIZE = 32 # 每次取样数
 THRESHOLD = 0.0
-LEARNINGRATE = 1e-3
+LEARNINGRATE = 2.5e-4
 
 class SumTree(object):
     data_pointer = 0
@@ -289,6 +289,7 @@ class BrainDQN:
             if self.train_step % 10000 == 0:
                 # print("cost_list:", self.cost_list)
                 plt.plot(self.cost_list)
+                plt.ylim(1000)
                 plt.xlabel("train_step")
                 plt.ylabel("loss")
                 plt.title("loss with batch_size 32")
@@ -332,10 +333,12 @@ class BrainDQN:
             if self.train_step % 10000 == 0:
                 # print("cost_list:", self.cost_list)
                 plt.plot(self.cost_list)
+                plt.ylim(ymax=5000)
                 plt.xlabel("train_step")
                 plt.ylabel("loss")
                 plt.title("loss with batch_size 32")
-                plt.savefig('shen/picture/' + "loss" + "_steps_" + str(self.train_step / 10000) + '_.png')
+                # plt.savefig('shen/picture/' + "loss" + "_steps_" + str(self.train_step / 10000) + '_.png')
+                plt.savefig('shen/picture/' + "loss" + '_.png')
                 plt.cla()
 
         self.train_step += 1
@@ -356,19 +359,19 @@ class BrainDQN:
         observation = observation[np.newaxis, :] # 本来第一维为样本数， 单次估计则为1 ，要加上那一维
         action = np.zeros(self.n_actions)
 
-        if np.random.uniform() < self.epsilon: # 0.9 -> 0.001
-            # 随机选择
-            action_index = random.randrange(0, 10, 1)
-            if action_index >= 8: # 先设成强制选择等待
-                action_index = 1
-            else:
-                action_index = 0
-            # action_index = 0
-        else:
+        # if np.random.uniform() < self.epsilon: # 0.9 -> 0.001
+        #     # 随机选择
+        #     action_index = random.randrange(0, 10, 1)
+        #     if action_index >= 8: # 先设成强制选择等待
+        #         action_index = 1
+        #     else:
+        #         action_index = 0
+        #     # action_index = 0
+        # else:
             # 让 eval_net 神经网络生成所有 action 的值, 并选择值最大的 action
-            QValue = self.QValue.eval(feed_dict={self.stateInput: observation})[0] # 等价于 session.run(QValue)
-            action_index = np.argmax(QValue)
-        if day >= 87:
+        QValue = self.QValue.eval(feed_dict={self.stateInput: observation})[0] # 等价于 session.run(QValue)
+        action_index = np.argmax(QValue)
+        if day >= 86:
             action_index = 1
 
         # 选择网络选的动作
@@ -376,7 +379,7 @@ class BrainDQN:
 
         # 输出打印出来  同时存到txt中
         # QValue = self.QValue.eval(feed_dict={self.stateInput: observation})[0]
-        # print('QValue:'+str(QValue) + " action:" + str(action_index) + " day:"+str(day) + " epsilon:%.3f" % self.epsilon)
+        # print('QValue:'+str(QValue) + " action:" + str(action_index) + " day:"+str(day))
         # self.file.write('QValue:'+str(QValue) + " action:" + str(action_index) + " day:"+str(day) + " epsilon:%.3f" % self.epsilon + "\n")
 
         return action

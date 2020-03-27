@@ -26,8 +26,8 @@ class Env():
         self.buy_ticket_value = 0
         self.his_price = np.zeros((self.his_t, 87))
         # 不限制最小值会导致没有起飞更早的航班
-        # self.routeId = np.random.randint(low=self.his_t, high=len(self.data))
-        self.routeId =21
+        self.routeId = np.random.randint(low=self.his_t, high=len(self.data))
+        # self.routeId =21
         self.order_distribution = OrderGenerator(self.data[self.routeId], self.mode)
         self.totalReward = 0
 
@@ -43,6 +43,7 @@ class Env():
         state['his_order'] = self.his_order
         state['his_accept'] = self.his_accept
         state['orders'] = self.orders
+        state['order_left'] = self.order_left
 
         return state, self.done
 
@@ -92,6 +93,7 @@ class Env():
         state['his_order'] = self.his_order
         state['his_accept'] = self.his_accept
         state['orders'] = self.orders
+        state['order_left'] = self.order_left
 
         return state, reward, self.done, info
 
@@ -109,11 +111,11 @@ class Env():
 
         order_accept = 0
 
-        if self.today >= 86:
-            if type(buy_act).__name__ == 'list' or type(buy_act).__name__ == 'ndarray':
-                buy_act = np.ones_like(buy_act)
-            else:
-                buy_act = 1
+        # if self.today >= 86:
+        #     if type(buy_act).__name__ == 'list' or type(buy_act).__name__ == 'ndarray':
+        #         buy_act = np.ones_like(buy_act)
+        #     else:
+        #         buy_act = 1
         reward_buy = self.getBuyReward(buy_act, self.orders)
         if len(self.orders) == len(buy_act):
             orders_after_action = []
@@ -161,6 +163,7 @@ class Env():
         state['his_order'] = self.his_order
         state['his_accept'] = self.his_accept
         state['orders'] = self.orders
+        state['order_left'] = self.order_left
 
         reward = {}
         reward['reward_accept'] = reward_accept
@@ -172,7 +175,7 @@ class Env():
         print(f'Day: {self.today}')
         print(f'Orders: {self.orders}')
         print(f'Order left: {self.order_left}')
-        print(f'Profit: {self.profit}')
+        # print(f'Profit: {self.profit}')
 
     def getAcceptReward(self, act):
         '''
@@ -211,19 +214,16 @@ class Env():
         return self.totalReward
 
     def getTodayIndex(self):
-        if self.order_num == self.order_left:
-            return -1
-        else:
-            return self.today
+        return self.today
 
+    # 少加了1
     def getNextPrice(self):
-        next_price = np.zeros((self.his_t, 87))
-        if self.today >= 86:
-            next_price = self.his_price
-        else:
+        next_price = self.his_price.copy()
+        next_day = self.today + 1
+        if next_day < 87:
             for i in range(self.his_t):
-                if self.today + i < 87:
-                    next_price[i, self.today + i] = self.data[self.routeId - i][self.today + i]
+                if next_day + i < 87:
+                    next_price[i, next_day + i] = self.data[self.routeId - i][next_day + i]
         return next_price
 
 

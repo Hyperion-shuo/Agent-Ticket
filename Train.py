@@ -1,10 +1,10 @@
 from Env import Env
 # from algorithm.BrainAC import ActorCritic
-from algorithm.BrainDQN import BrainDQN
+from algorithm.BrainDQN2 import BrainDQN
 from OrderGenerate import OrderGenerator, readRoute
 import numpy as np
 import random
-from  datetime import*
+from datetime import*
 import matplotlib
 # matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -16,6 +16,17 @@ import tensorflow as tf
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth = True
 # session = tf.Session(config=config)
+
+def to_state_dqn(his_price, order_price, day):
+    his_t = his_price.shape[0]
+    s = his_price.copy()
+    for i in range(his_t):
+        if day + i + 1 <= 86:
+            s[i, :day + i + 1] -= order_price
+        else:
+            s[i, :] -= order_price
+    return -s
+
 
 class TikcetPlay():
     def __init__(self, history_take_off=1, order_num=1):
@@ -150,10 +161,10 @@ class TikcetPlay():
     def train_DQN(self, max_game=1000, epsilon=.95):
         # 初始化RL Brain
         actions = 2  # 行动个数
-        brain = BrainDQN(actions, prioritized=False)
+        brain = BrainDQN(actions)
         total_steps = 0
         game_num = 0
-        profit_list, avg_day_list, profit_random_list = [], [], []
+        profit_list, day_list = [], []
 
         while game_num < max_game:
             # 初始化游戏
@@ -161,29 +172,91 @@ class TikcetPlay():
             obs, done = self.env.reset()
             reward = 0
             info = {}
-            day_list, order_finish_day = [], []
+            flag = np.random.rand()
 
-            while not done:
-                today = self.env.getTodayIndex() + 1
-                order_num = len(obs["orders"])
-                action = np.zeros(order_num) # order_num为0时长度为0
-                for i in range(order_num):
-                    s = (obs["his_price"] - obs["orders"][i]).reshape((87,2,1))
-                    a = brain.getAction(s, today)
-                    r = obs["orders"][i] - obs["his_price"][0, self.env.getTodayIndex()] if a[1]==1 else 0
-                    # 已经对最后一天做了处理
-                    s_ = (self.env.getNextPrice() - obs["orders"][i]).reshape((87,2,1))
-                    done = True if (self.env.getTodayIndex() >= 86 or a[1] == 1) else False
-                    brain.store_transition(s, a, r, s_, done)
-                    action[i] = a[1]
-                # print("step %d" % total_steps)
-                # print(action)
-                obs, reward, done, info = self.env.separateStep(1, action)
-                if len(action) > 0:
-                    print("day %d, action %d， reward %d" % (today, action[0], reward["reward_buy"]))
-                total_steps += 1
-                # if total_steps > 100:
-                #     brain.trainQNetwork()
+            order_buy_day = []
+            if brain.epsilon > flag:
+                while not done:
+                    today = self.env.getTodayIndex()
+                    next_day = today + 1 if today + 1 <= 86 else 86
+                    order_num = len(obs["orders"])
+                    action = np.zeros(order_num)  # order_num为0时长度为0
+                    next_order_buy_day = []
+                    # print('len his_order %d, today %d' % (len(obs['his_order']), today))
+                    for i in range(order_num):
+                        # s = (obs["his_price"]).transpose()[:,:,None]
+                        # print(today, obs['his_price'])
+                        s = to_state_dqn(obs['his_price'], obs['orders'][i], today)
+                        # print(today, s)
+                        s = s.transpose()[:,:,None]
+                        if today == order_buy_day[i]:
+                            a = [0, 1]
+                            order_buy_day[i] = -1
+                        else:
+                            a = [1, 0]
+                        r = obs["orders"][i] - obs["his_price"][0, today] if a[1] == 1 else 0
+                        r_norm = r / 800
+                        # 已经对最后一天做了处理
+                        # s_ = (self.env.getNextPrice()).transpose()[:,:,None]
+                        # print(next_day, self.env.getNextPrice())
+                        s_ = to_state_dqn(self.env.getNextPrice(), obs['orders'][i], next_day)
+                        # print(next_day, s_)
+                        s_ = s_.transpose()[:,:,None]
+                        done = True if (today >= 86 or a[1] == 1) else False
+                        brain.store_transition(s, a, r_norm, s_, done)
+                        print("today:%d, s:%d, a:%d, r:%d, s_:%d, done: %d" % (today, s[today, 0, 0], a[1], r, s_[next_day, 0, 0], done))
+                        action[i] = a[1]
+                        if a[1] == 1:
+                            day_list.append(today)
+                    for i in range(len(order_buy_day)):
+                        if order_buy_day[i] != -1:
+                            next_order_buy_day.append(order_buy_day[i])
+                    order_buy_day = next_order_buy_day
+                    if obs["his_order"][-1] != -1 and obs["order_left"] > 0:
+                        order_buy_day.append(np.random.choice(np.arange(today + 1, 87, 1)))
+                    obs, reward, done, info = self.env.separateStep(1, action)
+
+                    total_steps += 1
+                    if total_steps > 100:
+                        brain.trainQNetwork()
+                # print(len(self.env.orders))
+            else:
+                while not done:
+                    today = self.env.getTodayIndex()
+                    next_day = today + 1 if today + 1 <= 86 else 86
+                    order_num = len(obs["orders"])
+                    action = np.zeros(order_num) # order_num为0时长度为0
+                    for i in range(order_num):
+                        # s = (obs["his_price"]).transpose()[:,:,None]
+                        s = to_state_dqn(obs['his_price'], obs['orders'][i], today).transpose()[:, :, None]
+                        a = brain.getAction(s, today)
+                        r = (obs["orders"][i] - obs["his_price"][0, today]) if a[1]==1 else 0
+                        r_norm = r / 100
+                        # 已经对最后一天做了处理
+                        # s_ = (self.env.getNextPrice()).transpose()[:,:,None]
+                        s_ = to_state_dqn(self.env.getNextPrice(), obs['orders'][i], today + 1).transpose()[:, :, None]
+                        done = True if (self.env.getTodayIndex() >= 86 or a[1] == 1) else False
+                        brain.store_transition(s, a, r_norm, s_, done)
+                        # print("today: %d,s:%d, a:%d, r:%d, s_:%d, done: %d" % (today, s[today,0,0], a[1], r, s_[next_day,0,0], done))
+                        action[i] = a[1]
+                        if a[1] == 1:
+                            day_list.append(today)
+                    obs, reward, done, info = self.env.separateStep(1, action)
+                    # if len(action) > 0:
+                    #     for i in range(len(action)):
+                    #         if action[i] == 1:
+                    #             print("agent: day %d, action %d， reward %d" % (today, action[i], reward["reward_buy"]))
+                    total_steps += 1
+                    if total_steps > 100:
+                        brain.trainQNetwork()
+            profit_list.append(self.env.getTotalReward())
+            if game_num % 2 == 0:
+            #     plt.plot()
+            #     plt.xlabel("game")
+            #     plt.ylabel("reward")
+            #     plt.savefig('shen/picture/' + "reward" + "_game_" + str(game_num) + '_.png')
+            #     plt.cla()
+                print("avg_profit: %f, avg_day %f" % (np.average(profit_list), np.average(day_list)))
 
 
 
@@ -206,6 +279,6 @@ class TikcetPlay():
 if __name__ == "__main__":
     # P = TikcetPlay()
     # P.transcation_AC()
-    P = TikcetPlay(history_take_off=2, order_num=10)
-    P.train_DQN(max_game=1)
+    P = TikcetPlay(history_take_off=7, order_num=10)
+    P.train_DQN(max_game=500)
 
