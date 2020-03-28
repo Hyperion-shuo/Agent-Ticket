@@ -8,12 +8,12 @@ from collections import deque
 
 # Hyper Parameters:
 GAMMA = 0.99  # 奖励衰减值
-EXPLORE = 20000.
+EXPLORE = 1000.
 FINAL_EPSILON = 0.01  # epsilon的最小值
-INITIAL_EPSILON = 0.99  #  epsilon初始值
+INITIAL_EPSILON = 0.9  #  epsilon初始值
 REPLAY_MEMORY = 10000  # 记忆库容量
 BATCH_SIZE = 32  # 每次取样数
-LEARNINGRATE = 2e-4
+LEARNINGRATE = 1e-3
 
 
 class Model(tf.keras.Model):
@@ -147,6 +147,38 @@ class Model(tf.keras.Model):
         x5 = self.fc12(x5)
         return x5
 
+class Model_Simple(tf.keras.Model):
+    def __init__(self):
+        super(Model_Simple, self).__init__()
+        initializer = tf.initializers.VarianceScaling(scale=2.0)
+        regularizer = tf.keras.regularizers.l2(l=0.01)
+        self.bn = tf.keras.layers.BatchNormalization(axis=3)
+        self.conv1 = tf.keras.layers.Conv2D(filters=10, kernel_size=2, strides=1, padding='same',
+                                              activation='relu', kernel_initializer=initializer)
+        self.pool1 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
+        # self.conv2 = tf.keras.layers.Conv2D(filters=16, kernel_size=3, strides=1, padding='same',
+        #                                       activation='relu', kernel_initializer=initializer)
+        # self.pool2 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')                                      
+        # self.pool3 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
+        self.fc3 = tf.keras.layers.Dense(100, activation='relu',
+                                           kernel_initializer=initializer, kernel_regularizer=regularizer)
+        self.fc4 = tf.keras.layers.Dense(2, activation='softmax',
+                                          kernel_initializer=initializer, kernel_regularizer=regularizer)
+        self.flatten = tf.keras.layers.Flatten()
+
+
+    
+    def call(self, input_tensor, training=False):
+        x = self.bn(input_tensor)
+        x = self.conv1(x)
+        x = self.pool1(x)
+        # x = self.conv2(x)
+        # x = self.pool2(x)
+        x = self.flatten(x)
+        x = self.fc3(x)
+        x = self.fc4(x)
+        return x
+
 
 class BrainDQN:
     def __init__(self, actions):
@@ -163,35 +195,35 @@ class BrainDQN:
         self.target_model = self.createQNetwork()
 
         # saving and loading networks
-        self.eval_model_path = "shen/saved_networks/eval_model.h5"
-        self.target_model_path = "shen/saved_networks/target_model.h5"
-        self.model_dir = os.path.dirname(self.eval_model_path)
-        if os.path.exists(self.eval_model_path) and os.path.exists(self.target_model_path):
-            self.eval_model= tf.keras.models.load_model("shen/saved_networks/eval_model.h5")
-            self.target_model= tf.keras.models.load_model("shen/saved_networks/target_model.h5")
-            print("Successfully loaded:", self.eval_model_path, self.target_model_path)
-        else:
-            print("Could not find old network weights")
+        # self.eval_model_path = "shen/saved_networks/eval_checkpoint"
+        # self.target_model_path = "shen/saved_networks/target_checkpoint"
+        # self.model_dir = os.path.dirname(self.eval_model_path)
+        # if os.path.exists("shen/saved_networks/checkpoint"):
+        #     self.eval_model.load_weights(self.eval_model_path)
+        #     self.target_model.load_weights(self.target_model_path)
+        #     print("Successfully loaded:", self.eval_model_path, self.target_model_path)
+        # else:
+        #     print("Could not find old network weights")
 
-        self.device = '/cpu:0'
-        # self.device = '/gpu:3'
-        self.optimizer = tf.keras.optimizers.Adam(LEARNINGRATE)
+        # self.device = '/cpu:0'
+        self.device = '/gpu:3'
+        self.optimizer = tf.keras.optimizers.Adam(lr=LEARNINGRATE)
         self.eval_model.compile(optimizer=self.optimizer, loss='mse')
         self.target_model.compile(optimizer=self.optimizer, loss='mse')
 
     def createQNetwork(self):
-        model = Model()
+        model = Model_Simple()
         return model
 
     def trainQNetwork(self):
 
-        if self.train_step % 500 == 0:
+        if self.train_step % 200 == 0:
             self.copyTargetQNetwork()
             print('copyNetWork------------------------------------train_steps = ' + str(self.train_step))
 
-        if self.train_step % 10000 == 0:
-            self.eval_model.save('shen/saved_networks/eval_model.h5')
-            self.target_model.save('shen/saved_networks/target_model.h5')
+        # if self.train_step % 1000 == 0:
+        #     self.eval_model.save_weights(self.eval_model_path)
+        #     self.target_model.save_weights(self.target_model_path)
 
 
         with tf.device(self.device):
@@ -206,7 +238,7 @@ class BrainDQN:
             is_training = True
             # 直接call model 返回的是tensor 无法赋值， predict返回的numpy.ndarray
             # 还没弄清楚predict 是否要加is_training
-            q_eval = self.eval_model.predict(state_batch)
+            q_eval = self.eval_model.predict(state_batch) # (batch_size, 2)
             q_next_batch = self.target_model.predict(next_state_batch)
             q_next4eval_batch = self.eval_model.predict(next_state_batch)
             q_actionmax_batch = np.argmax(q_next4eval_batch, axis=1)
@@ -214,16 +246,19 @@ class BrainDQN:
             q_target = q_eval.copy()
             batch_index = np.arange(BATCH_SIZE)
             action_index = np.argmax(action_batch, axis=1)
-            q_target[:, action_index] = reward_batch + GAMMA * q_next_batch[:, q_actionmax_batch]
-
+            for i in range(BATCH_SIZE):
+                terminal = terminal_batch[i]
+                if terminal:
+                    q_target[i, action_index[i]] = reward_batch[i]
+                else:
+                    q_target[i, action_index[i]] = reward_batch[i] + GAMMA * q_next_batch[i, q_actionmax_batch[i]]
             self.cost = self.eval_model.train_on_batch(state_batch, q_target)
 
 
         self.cost_list.append(self.cost)
-        if self.train_step % 10000 == 0:
+        if self.train_step % 2000 == 0:
             # print("cost_list:", self.cost_list)
             plt.plot(self.cost_list)
-            plt.ylim(ymax=5000)
             plt.xlabel("train_step")
             plt.ylabel("loss")
             plt.title("loss with batch_size 32")
@@ -238,6 +273,7 @@ class BrainDQN:
 
     def getAction(self, observation, day):
         action = np.zeros(self.n_actions)
+        observation = observation[None,:,:,:]
         # if np.random.uniform() < self.epsilon: # 0.9 -> 0.001
         #     # 随机选择
         #     action_index = random.randrange(0, 10, 1)

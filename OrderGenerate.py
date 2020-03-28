@@ -73,9 +73,6 @@ def readRoute(filename):
         return result
 
 if __name__ == "__main__":
-    # route_list = readRoute("./wang/data/route")
-    # print(len(OrderGenerator(route_list[21],1)))
-    # print(route_list[21][:0])
-    a = [1,2,3,4,5,6,7,8,9]
-    a = [s**2  for s in a  if s>5]
-    print(a)
+    route_list = readRoute("Wang/data/route")
+    print(len(OrderGenerator(route_list[21],1)))
+    print(route_list[21][:0])

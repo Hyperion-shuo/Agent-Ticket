@@ -26,8 +26,8 @@ class Env():
         self.buy_ticket_value = 0
         self.his_price = np.zeros((self.his_t, 87))
         # 不限制最小值会导致没有起飞更早的航班
-        self.routeId = np.random.randint(low=self.his_t, high=len(self.data))
-        # self.routeId =21
+        # self.routeId = np.random.randint(low=self.his_t, high=len(self.data))
+        self.routeId =21
         self.order_distribution = OrderGenerator(self.data[self.routeId], self.mode)
         self.totalReward = 0
 
@@ -229,7 +229,7 @@ class Env():
 
 
 if __name__ == "__main__":
-    route_list = readRoute("./wang/data/route")
+    route_list = readRoute("Wang/data/route")
     env = Env(route_list,history_take_off=2)
     for i in range(86):
         action = np.random.randint(3)

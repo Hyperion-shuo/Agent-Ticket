@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 
 # Hyper Parameters:
 GAMMA = 0.99 # 奖励衰减值
-EXPLORE = 20000.
+EXPLORE = 10000.
 EXPLORE1 = 5000. # 逐步减小epsilon
 EXPLORE2 = 5000. # 逐步减小epsilon
 FINAL_EPSILON = 0.01 # epsilon的最小值
-INITIAL_EPSILON = 0.01 #  epsilon初始值
+INITIAL_EPSILON = 0.9 #  epsilon初始值
 REPLAY_MEMORY = 10000 # 记忆库容量
-BATCH_SIZE = 32 # 每次取样数
+BATCH_SIZE = 64 # 每次取样数
 THRESHOLD = 0.0
-LEARNINGRATE = 2.5e-4
+LEARNINGRATE = 1e-3
 
 class SumTree(object):
     data_pointer = 0
@@ -159,12 +159,12 @@ class BrainDQN:
         self.saver = tf.train.Saver()
         self.session = tf.InteractiveSession()
         self.session.run(tf.initialize_all_variables())
-        checkpoint = tf.train.get_checkpoint_state("shen/saved_networks")
-        if checkpoint and checkpoint.model_checkpoint_path:
-            self.saver.restore(self.session, checkpoint.model_checkpoint_path)
-            print("Successfully loaded:", checkpoint.model_checkpoint_path)
-        else:
-            print("Could not find old network weights")
+        # checkpoint = tf.train.get_checkpoint_state("shen/saved_networks")
+        # if checkpoint and checkpoint.model_checkpoint_path:
+        #     self.saver.restore(self.session, checkpoint.model_checkpoint_path)
+        #     print("Successfully loaded:", checkpoint.model_checkpoint_path)
+        # else:
+        print("Could not find old network weights")
 
     def createQNetwork(self):
         # network weights
@@ -379,7 +379,7 @@ class BrainDQN:
 
         # 输出打印出来  同时存到txt中
         # QValue = self.QValue.eval(feed_dict={self.stateInput: observation})[0]
-        # print('QValue:'+str(QValue) + " action:" + str(action_index) + " day:"+str(day))
+        print('QValue:'+str(QValue) + " action:" + str(action_index) + " day:"+str(day))
         # self.file.write('QValue:'+str(QValue) + " action:" + str(action_index) + " day:"+str(day) + " epsilon:%.3f" % self.epsilon + "\n")
 
         return action
