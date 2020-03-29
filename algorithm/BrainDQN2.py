@@ -205,8 +205,8 @@ class BrainDQN:
         # else:
         #     print("Could not find old network weights")
 
-        # self.device = '/cpu:0'
-        self.device = '/gpu:3'
+        self.device = '/cpu:0'
+        # self.device = '/gpu:3'
         self.optimizer = tf.keras.optimizers.Adam(lr=LEARNINGRATE)
         self.eval_model.compile(optimizer=self.optimizer, loss='mse')
         self.target_model.compile(optimizer=self.optimizer, loss='mse')
@@ -241,11 +241,11 @@ class BrainDQN:
             q_eval = self.eval_model.predict(state_batch) # (batch_size, 2)
             q_next_batch = self.target_model.predict(next_state_batch)
             q_next4eval_batch = self.eval_model.predict(next_state_batch)
-            q_actionmax_batch = np.argmax(q_next4eval_batch, axis=1)
+            q_actionmax_batch = np.argmax(q_next4eval_batch, axis=-1)
 
             q_target = q_eval.copy()
-            batch_index = np.arange(BATCH_SIZE)
-            action_index = np.argmax(action_batch, axis=1)
+            action_index = np.argmax(action_batch, axis=-1)
+            print(action_batch.shape, q_next4eval_batch.shape)
             for i in range(BATCH_SIZE):
                 terminal = terminal_batch[i]
                 if terminal:
@@ -298,6 +298,7 @@ class BrainDQN:
             self.replayMemory.popleft()
 
     def copyTargetQNetwork(self):
-        for eval_layer, target_layer in zip(self.eval_model.layers, self.target_model.layers):
-            target_layer.set_weights(eval_layer.get_weights())
+        # for eval_layer, target_layer in zip(self.eval_model.layers, self.target_model.layers):
+        #     target_layer.set_weights(eval_layer.get_weights())
+        self.target_model.set_weights(self.eval_model.get_weights())
 

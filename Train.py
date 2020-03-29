@@ -1,6 +1,6 @@
 from Env import Env
 # from algorithm.BrainAC import ActorCritic
-from algorithm.BrainDQN import BrainDQN
+from algorithm.BrainDQN2 import BrainDQN
 from OrderGenerate import OrderGenerator, readRoute
 import numpy as np
 import random
