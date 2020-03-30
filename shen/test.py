@@ -115,6 +115,7 @@ class DDQNAgent:  # Double Deep Q-Network
         r_batch = self.rewards[idxes]
         ns_batch = self.next_states[idxes]
         done_batch = self.dones[idxes]
+        print("a batch shape", a_batch.shape)
         # Double Q-Learning, decoupling selection and evaluation of the bootstrap action
         # selection with the current DQN model
         best_action_idxes, _ = self.model.action_value(ns_batch)
@@ -197,6 +198,19 @@ if __name__ == '__main__':
     # env = gym.wrappers.Monitor(env, './recording', force=True)  # to record the process
     rewards_sum = agent.evalation(env)
     print("After Training: %d out of 200" % rewards_sum) # 200 out of 200
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # import tensorflow as tf
 # import numpy as np

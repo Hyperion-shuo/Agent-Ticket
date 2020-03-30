@@ -200,6 +200,40 @@ class BrainDQN:
 
         return stateInput, QValue, W_conv1, b_conv1, W_fc1, b_fc1, W_fc2, b_fc2
 
+    def createQNetwork2(self):
+        # network weights
+        W_conv1 = self.weight_variable([8, 2, 1, 32])
+        b_conv1 = self.bias_variable([32])
+
+        W_fc1 = self.weight_variable([800, 100])
+        b_fc1 = self.bias_variable([100])
+
+        W_fc2 = self.weight_variable([100, self.n_actions]) # [200, 2]
+        b_fc2 = self.bias_variable([self.n_actions]) # [2]
+
+        # input layer
+        stateInput = tf.placeholder("float", [None, 87, 2, 1])
+        # 88 x 2 x 1
+
+        # hidden layers
+        h_conv1 = tf.nn.relu(self.conv2d(stateInput, W_conv1, 1) + b_conv1)
+        # 80 x 1 x 10
+
+        # h_pool1 = self.max_pool_4x4(h_conv1)
+        # 20 x 1 x 10
+
+        h_conv2_flat = tf.reshape(h_conv1, [-1, 800])
+        # 200 x 1
+
+        h_fc1 = tf.nn.relu(tf.matmul(h_conv2_flat, W_fc1) + b_fc1)
+
+        # 100 x 2
+        # Q Value layer
+        QValue = tf.matmul(h_fc1, W_fc2) + b_fc2
+        # 2 x 1
+
+        return stateInput, QValue, W_conv1, b_conv1, W_fc1, b_fc1, W_fc2, b_fc2
+
     def createTrainingMethod(self):
         self.actionInput = tf.placeholder("float", [None, self.n_actions])
         if self.prioritized:

@@ -4,22 +4,24 @@ import matplotlib.pyplot as plt
 import os
 import random
 from collections import deque
+from time import time
 
 
 # Hyper Parameters:
 GAMMA = 0.99  # 奖励衰减值
-EXPLORE = 1000.
+EXPLORE = 4000.
 FINAL_EPSILON = 0.01  # epsilon的最小值
-INITIAL_EPSILON = 0.9  #  epsilon初始值
+INITIAL_EPSILON = 0.99  #  epsilon初始值
 REPLAY_MEMORY = 10000  # 记忆库容量
-BATCH_SIZE = 32  # 每次取样数
-LEARNINGRATE = 1e-3
+BATCH_SIZE = 64  # 每次取样数
+LEARNINGRATE = 5e-4
 
 
 class Model(tf.keras.Model):
     def __init__(self):
         super(Model, self).__init__()
-        initializer = tf.initializers.VarianceScaling(scale=2.0)
+        # initializer = tf.initializers.VarianceScaling(scale=2.0)
+        initializer = tf.initializers.GlorotUniform()
         regularizer = tf.keras.regularizers.l2(l=0.01)
         self.bn = tf.keras.layers.BatchNormalization(axis=3)
         self.conv1_1 = tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same',
@@ -150,33 +152,37 @@ class Model(tf.keras.Model):
 class Model_Simple(tf.keras.Model):
     def __init__(self):
         super(Model_Simple, self).__init__()
-        initializer = tf.initializers.VarianceScaling(scale=2.0)
+        # initializer = tf.keras.initializers.VarianceScaling(scale=0.02) # 0.02 is best
+        initializer = tf.initializers.GlorotUniform()
         regularizer = tf.keras.regularizers.l2(l=0.01)
         self.bn = tf.keras.layers.BatchNormalization(axis=3)
         self.conv1 = tf.keras.layers.Conv2D(filters=10, kernel_size=2, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool1 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        # self.conv2 = tf.keras.layers.Conv2D(filters=16, kernel_size=3, strides=1, padding='same',
-        #                                       activation='relu', kernel_initializer=initializer)
-        # self.pool2 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')                                      
-        # self.pool3 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
         self.fc3 = tf.keras.layers.Dense(100, activation='relu',
-                                           kernel_initializer=initializer, kernel_regularizer=regularizer)
-        self.fc4 = tf.keras.layers.Dense(2, activation='softmax',
-                                          kernel_initializer=initializer, kernel_regularizer=regularizer)
+                                           kernel_initializer=initializer)
+        self.fc4 = tf.keras.layers.Dense(2, kernel_initializer=initializer)
         self.flatten = tf.keras.layers.Flatten()
+
 
 
     
     def call(self, input_tensor, training=False):
-        x = self.bn(input_tensor)
+        # x = self.bn(input_tensor)
+        x = input_tensor
+        # print(x.shape)
         x = self.conv1(x)
-        x = self.pool1(x)
+        # print(x.shape)
+        x =self.pool1(x)
+        # print(x.shape)
         # x = self.conv2(x)
         # x = self.pool2(x)
         x = self.flatten(x)
+        # print(x.shape)
         x = self.fc3(x)
+        # print(x.shape)
         x = self.fc4(x)
+        # print(x.shape)
         return x
 
 
@@ -209,7 +215,8 @@ class BrainDQN:
         # self.device = '/gpu:3'
         self.optimizer = tf.keras.optimizers.Adam(lr=LEARNINGRATE)
         self.eval_model.compile(optimizer=self.optimizer, loss='mse')
-        self.target_model.compile(optimizer=self.optimizer, loss='mse')
+        self.eval_model._experimental_run_tf_function = False
+        # self.target_model.compile(optimizer=self.optimizer, loss='mse')
 
     def createQNetwork(self):
         model = Model_Simple()
@@ -233,26 +240,41 @@ class BrainDQN:
             reward_batch = np.array([data[2] for data in minibatch])
             next_state_batch = np.array([data[3] for data in minibatch])
             terminal_batch = np.array([data[4] for data in minibatch])
-
+            # print("mean reward ", np.mean(reward_batch))
             # Target Q Network
             is_training = True
             # 直接call model 返回的是tensor 无法赋值， predict返回的numpy.ndarray
             # 还没弄清楚predict 是否要加is_training
+            t0 = time()
             q_eval = self.eval_model.predict(state_batch) # (batch_size, 2)
+            t1 = time()
             q_next_batch = self.target_model.predict(next_state_batch)
+            t2 = time()
             q_next4eval_batch = self.eval_model.predict(next_state_batch)
+            t3 = time()
             q_actionmax_batch = np.argmax(q_next4eval_batch, axis=-1)
 
             q_target = q_eval.copy()
             action_index = np.argmax(action_batch, axis=-1)
-            print(action_batch.shape, q_next4eval_batch.shape)
+            # print(action_batch.shape, q_next4eval_batch.shape, action_index.shape, q_actionmax_batch.shape)
             for i in range(BATCH_SIZE):
                 terminal = terminal_batch[i]
                 if terminal:
                     q_target[i, action_index[i]] = reward_batch[i]
                 else:
                     q_target[i, action_index[i]] = reward_batch[i] + GAMMA * q_next_batch[i, q_actionmax_batch[i]]
+
+            # q_target = reward_batch + GAMMA *  q_next_batch[np.arange(q_next_batch.shape[0]), q_actionmax_batch] * (
+            #            1 - terminal_batch)
+            # for i ,val in enumerate(action_batch):
+            #     q_eval[i, val] = q_target[i]
+            # print(q_eval)
+
+            # 用注释的版本要改成q——eval
+            # t4 = time()
             self.cost = self.eval_model.train_on_batch(state_batch, q_target)
+            # t5 = time()
+            # print("predict1",t1 - t0, "\npredict2" ,t2 - t1,"\npredict3", t3 - t2 ,"\nback_prop", t5- t4)
 
 
         self.cost_list.append(self.cost)

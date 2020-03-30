@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import copy
 import os
 import tensorflow as tf
+from time import time
 
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
@@ -28,6 +29,7 @@ def to_state_dqn(his_price, order_price, day):
             s[i, :day + i + 1] -= order_price
         else:
             s[i, :] -= order_price
+        s = (s - 200) / 200
     return -s
 
 
@@ -225,7 +227,9 @@ class TikcetPlay():
                                 print("random: day %d, action %d， reward %d" % (today, action[i], reward["reward_buy"]))
                     total_steps += 1
                     if total_steps > 100:
+                        # t1 = time()
                         brain.trainQNetwork()
+                        # print("train network",time()- t1)
                     # if total_steps == 200:
                     #     print(brain.eval_model.summary())
                 # print(len(self.env.orders))
