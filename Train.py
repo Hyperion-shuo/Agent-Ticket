@@ -292,6 +292,6 @@ class TikcetPlay():
 if __name__ == "__main__":
     # P = TikcetPlay()
     # P.transcation_AC()
-    P = TikcetPlay(history_take_off=2, order_num=10)
+    P = TikcetPlay(history_take_off=7, order_num=10)
     P.train_DQN(max_game=600)
 

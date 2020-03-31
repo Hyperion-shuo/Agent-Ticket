@@ -23,19 +23,16 @@ class Model(tf.keras.Model):
         # initializer = tf.initializers.VarianceScaling(scale=2.0)
         initializer = tf.initializers.GlorotUniform()
         regularizer = tf.keras.regularizers.l2(l=0.01)
-        self.bn = tf.keras.layers.BatchNormalization(axis=3)
         self.conv1_1 = tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.conv1_2 = tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool1_3 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        self.drop1_3 = tf.keras.layers.Dropout(0.3)
         self.conv1_4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.conv1_5 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool1_6 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        self.drop1_7 = tf.keras.layers.Dropout(0.4)
         self.fc1_8 = tf.keras.layers.Dense(500, activation='relu',
                                            kernel_initializer=initializer, kernel_regularizer=regularizer)
 
@@ -44,13 +41,11 @@ class Model(tf.keras.Model):
         self.conv2_2 = tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool2_3 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        self.drop2_3 = tf.keras.layers.Dropout(0.3)
         self.conv2_4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.conv2_5 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool2_6 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        self.drop2_7 = tf.keras.layers.Dropout(0.4)
         self.fc2_8 = tf.keras.layers.Dense(500, activation='relu',
                                            kernel_initializer=initializer, kernel_regularizer=regularizer)
 
@@ -59,13 +54,11 @@ class Model(tf.keras.Model):
         self.conv3_2 = tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool3_3 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        self.drop3_3 = tf.keras.layers.Dropout(0.3)
         self.conv3_4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.conv3_5 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool3_6 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        self.drop3_7 = tf.keras.layers.Dropout(0.4)
         self.fc3_8 = tf.keras.layers.Dense(500, activation='relu',
                                            kernel_initializer=initializer, kernel_regularizer=regularizer)
 
@@ -74,77 +67,65 @@ class Model(tf.keras.Model):
         self.conv4_2 = tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool4_3 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        self.drop4_3 = tf.keras.layers.Dropout(0.3)
         self.conv4_4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.conv4_5 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
                                               activation='relu', kernel_initializer=initializer)
         self.pool4_6 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2, padding='valid')
-        self.drop4_7 = tf.keras.layers.Dropout(0.4)
         self.fc4_8 = tf.keras.layers.Dense(500, activation='relu',
                                            kernel_initializer=initializer, kernel_regularizer=regularizer)
 
         self.flatten = tf.keras.layers.Flatten()
         self.concat = tf.keras.layers.Concatenate(axis=1)
-        self.bn9 = tf.keras.layers.BatchNormalization(axis=1)
-        self.drop10 = tf.keras.layers.Dropout(0.5)
         self.fc11 = tf.keras.layers.Dense(400, activation='relu',
                                           kernel_initializer=initializer, kernel_regularizer=regularizer)
         self.fc12 = tf.keras.layers.Dense(2, activation='softmax',
                                           kernel_initializer=initializer, kernel_regularizer=regularizer)
 
     def call(self, input_tensor, training=False):
+        # print("\nis_trainning", training)
         x = input_tensor
         # print("x input:", x.shape)
-        x = self.bn(x, training)
-
+        # mean, var = np.mean(x, axis=(0,1,2)), np.var(x, axis=(0, 1,2))
+        # mean, var = tf.math.reduce_mean(x, axis=(0,1,2)), tf.math.reduce_variance(x, axis=(0,1,2))
+        # print("batch_norm", mean, var)
         x1 = self.conv1_1(x)
         x1 = self.conv1_2(x1)
         x1 = self.pool1_3(x1)
-        x1 = self.drop1_3(x1, training)
         x1 = self.conv1_4(x1)
         x1 = self.conv1_5(x1)
         x1 = self.pool1_6(x1)
-        x1 = self.drop1_7(x1, training)
         x1 = self.flatten(x1)
         x1 = self.fc1_8(x1)
 
         x2 = self.conv2_1(x)
         x2 = self.conv2_2(x2)
         x2 = self.pool2_3(x2)
-        x2 = self.drop2_3(x2, training)
         x2 = self.conv2_4(x2)
         x2 = self.conv2_5(x2)
         x2 = self.pool2_6(x2)
-        x2 = self.drop2_7(x2, training)
         x2 = self.flatten(x2)
         x2 = self.fc2_8(x2)
 
         x3 = self.conv3_1(x)
         x3 = self.conv3_2(x3)
         x3 = self.pool3_3(x3)
-        x3 = self.drop3_3(x3, training)
         x3 = self.conv3_4(x3)
         x3 = self.conv3_5(x3)
         x3 = self.pool3_6(x3)
-        x3 = self.drop3_7(x3, training)
         x3 = self.flatten(x3)
         x3 = self.fc3_8(x3)
 
         x4 = self.conv4_1(x)
         x4 = self.conv4_2(x4)
         x4 = self.pool4_3(x4)
-        x4 = self.drop4_3(x4, training)
         x4 = self.conv4_4(x4)
         x4 = self.conv4_5(x4)
         x4 = self.pool4_6(x4)
-        x4 = self.drop4_7(x4, training)
         x4 = self.flatten(x4)
         x4 = self.fc4_8(x4)
 
         x5 = self.concat([x1, x2, x3, x4])
-        x5 = self.bn9(x5, training)
-        x5 = self.drop10(x5, training)
         x5 = self.fc11(x5)
         x5 = self.fc12(x5)
         return x5
@@ -165,10 +146,8 @@ class Model_Simple(tf.keras.Model):
         self.flatten = tf.keras.layers.Flatten()
 
 
-
-    
     def call(self, input_tensor, training=False):
-        # x = self.bn(input_tensor)
+        # x = self.bn(input_tensor, training)
         x = input_tensor
         # print(x.shape)
         x = self.conv1(x)
@@ -219,7 +198,8 @@ class BrainDQN:
         # self.target_model.compile(optimizer=self.optimizer, loss='mse')
 
     def createQNetwork(self):
-        model = Model_Simple()
+        # model = Model_Simple()
+        model = Model()
         return model
 
     def trainQNetwork(self):
@@ -271,9 +251,9 @@ class BrainDQN:
             # print(q_eval)
 
             # 用注释的版本要改成q——eval
-            # t4 = time()
+            t4 = time()
             self.cost = self.eval_model.train_on_batch(state_batch, q_target)
-            # t5 = time()
+            t5 = time()
             # print("predict1",t1 - t0, "\npredict2" ,t2 - t1,"\npredict3", t3 - t2 ,"\nback_prop", t5- t4)
 
 
