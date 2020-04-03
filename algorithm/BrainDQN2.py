@@ -5,15 +5,15 @@ import os
 import random
 from collections import deque
 from time import time
-
+from tensorflow.keras.utils import plot_model
 
 # Hyper Parameters:
 GAMMA = 0.99  # 奖励衰减值
-EXPLORE = 4000.
+EXPLORE = 30000.
 FINAL_EPSILON = 0.01  # epsilon的最小值
-INITIAL_EPSILON = 0.99  #  epsilon初始值
-REPLAY_MEMORY = 10000  # 记忆库容量
-BATCH_SIZE = 64  # 每次取样数
+INITIAL_EPSILON = 0.01  #  epsilon初始值
+REPLAY_MEMORY = 25000  # 记忆库容量
+BATCH_SIZE = 128  # 每次取样数
 LEARNINGRATE = 5e-4
 
 
@@ -79,8 +79,7 @@ class Model(tf.keras.Model):
         self.concat = tf.keras.layers.Concatenate(axis=1)
         self.fc11 = tf.keras.layers.Dense(400, activation='relu',
                                           kernel_initializer=initializer, kernel_regularizer=regularizer)
-        self.fc12 = tf.keras.layers.Dense(2, activation='softmax',
-                                          kernel_initializer=initializer, kernel_regularizer=regularizer)
+        self.fc12 = tf.keras.layers.Dense(2, kernel_initializer=initializer, kernel_regularizer=regularizer)
 
     def call(self, input_tensor, training=False):
         # print("\nis_trainning", training)
@@ -180,18 +179,19 @@ class BrainDQN:
         self.target_model = self.createQNetwork()
 
         # saving and loading networks
-        # self.eval_model_path = "shen/saved_networks/eval_checkpoint"
-        # self.target_model_path = "shen/saved_networks/target_checkpoint"
-        # self.model_dir = os.path.dirname(self.eval_model_path)
-        # if os.path.exists("shen/saved_networks/checkpoint"):
-        #     self.eval_model.load_weights(self.eval_model_path)
-        #     self.target_model.load_weights(self.target_model_path)
-        #     print("Successfully loaded:", self.eval_model_path, self.target_model_path)
-        # else:
-        #     print("Could not find old network weights")
+        self.eval_model_path = "shen/saved_networks/eval_checkpoint"
+        self.target_model_path = "shen/saved_networks/target_checkpoint"
+        self.model_dir = os.path.dirname(self.eval_model_path)
+        if os.path.exists("shen/saved_networks/checkpoint"):
+            self.eval_model.load_weights(self.eval_model_path)
+            self.target_model.load_weights(self.target_model_path)
+            print("################Successfully loaded:", self.eval_model_path, self.target_model_path,
+            "####################\n##############\n#################\n####################\n")
+        else:
+            print("################Could not find old network weights################\n################\n###########")
 
-        self.device = '/cpu:0'
-        # self.device = '/gpu:3'
+        # self.device = '/cpu:0'
+        self.device = '/gpu:3'
         self.optimizer = tf.keras.optimizers.Adam(lr=LEARNINGRATE)
         self.eval_model.compile(optimizer=self.optimizer, loss='mse')
         self.eval_model._experimental_run_tf_function = False
@@ -206,11 +206,11 @@ class BrainDQN:
 
         if self.train_step % 200 == 0:
             self.copyTargetQNetwork()
-            print('copyNetWork------------------------------------train_steps = ' + str(self.train_step))
+            print('copyNetWork-----------------------------------------------train_steps = ' + str(self.train_step))
 
-        # if self.train_step % 1000 == 0:
-        #     self.eval_model.save_weights(self.eval_model_path)
-        #     self.target_model.save_weights(self.target_model_path)
+        if self.train_step % 10000 == 0:
+            self.eval_model.save_weights(self.eval_model_path)
+            self.target_model.save_weights(self.target_model_path)
 
 
         with tf.device(self.device):
@@ -220,18 +220,12 @@ class BrainDQN:
             reward_batch = np.array([data[2] for data in minibatch])
             next_state_batch = np.array([data[3] for data in minibatch])
             terminal_batch = np.array([data[4] for data in minibatch])
-            # print("mean reward ", np.mean(reward_batch))
             # Target Q Network
             is_training = True
             # 直接call model 返回的是tensor 无法赋值， predict返回的numpy.ndarray
-            # 还没弄清楚predict 是否要加is_training
-            t0 = time()
             q_eval = self.eval_model.predict(state_batch) # (batch_size, 2)
-            t1 = time()
             q_next_batch = self.target_model.predict(next_state_batch)
-            t2 = time()
             q_next4eval_batch = self.eval_model.predict(next_state_batch)
-            t3 = time()
             q_actionmax_batch = np.argmax(q_next4eval_batch, axis=-1)
 
             q_target = q_eval.copy()
@@ -244,29 +238,20 @@ class BrainDQN:
                 else:
                     q_target[i, action_index[i]] = reward_batch[i] + GAMMA * q_next_batch[i, q_actionmax_batch[i]]
 
-            # q_target = reward_batch + GAMMA *  q_next_batch[np.arange(q_next_batch.shape[0]), q_actionmax_batch] * (
-            #            1 - terminal_batch)
-            # for i ,val in enumerate(action_batch):
-            #     q_eval[i, val] = q_target[i]
-            # print(q_eval)
-
-            # 用注释的版本要改成q——eval
-            t4 = time()
             self.cost = self.eval_model.train_on_batch(state_batch, q_target)
-            t5 = time()
-            # print("predict1",t1 - t0, "\npredict2" ,t2 - t1,"\npredict3", t3 - t2 ,"\nback_prop", t5- t4)
 
 
         self.cost_list.append(self.cost)
-        if self.train_step % 2000 == 0:
+        if self.train_step % 10000 == 0:
             # print("cost_list:", self.cost_list)
             plt.plot(self.cost_list)
             plt.xlabel("train_step")
             plt.ylabel("loss")
             plt.title("loss with batch_size 32")
-            # plt.savefig('shen/picture/' + "loss" + "_steps_" + str(self.train_step / 10000) + '_.png')
-            plt.savefig('shen/picture/' + "loss" + '_.png')
+            plt.savefig('shen/picture/' + "loss" + "_steps_" + str(self.train_step / 10000) + '_.png')
+            # plt.savefig('shen/picture/' + "loss" + '_.png')
             plt.cla()
+            self.cost_list=[]
 
         self.train_step += 1
         if self.epsilon > FINAL_EPSILON:
@@ -304,3 +289,8 @@ class BrainDQN:
         #     target_layer.set_weights(eval_layer.get_weights())
         self.target_model.set_weights(self.eval_model.get_weights())
 
+if __name__ == "__main__":
+    with(tf.device(":\cpu0")):
+        model = Model()
+        model.load_weights("../shen/saved_networks/eval_checkpoint")
+        plot_model(model, to_file='model.png')

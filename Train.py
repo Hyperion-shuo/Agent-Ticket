@@ -17,7 +17,7 @@ from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
 config = ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.75
+config.gpu_options.per_process_gpu_memory_fraction = 0.
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
@@ -221,14 +221,14 @@ class TikcetPlay():
                     if obs["his_order"][-1] != -1 and obs["order_left"] > 0:
                         order_buy_day.append(np.random.choice(np.arange(today + 1, 87, 1)))
                     obs, reward, done, info = self.env.separateStep(1, action)
-                    if len(action) > 0:
-                        for i in range(len(action)):
-                            if action[i] == 1:
-                                print("random: day %d, action %d， reward %d" % (today, action[i], reward["reward_buy"]))
+                    # if len(action) > 0:
+                    #     for i in range(len(action)):
+                    #         if action[i] == 1:
+                    #             print("random: day %d, action %d， reward %d" % (today, action[i], reward["reward_buy"]))
                     total_steps += 1
-                    if total_steps > 100:
-                        # t1 = time()
-                        brain.trainQNetwork()
+                    # if total_steps > 100:
+                    #     # t1 = time()
+                    #     brain.trainQNetwork()
                         # print("train network",time()- t1)
                     # if total_steps == 200:
                     #     print(brain.eval_model.summary())
@@ -260,15 +260,19 @@ class TikcetPlay():
                             if action[i] == 1:
                                 print("agent: day %d, action %d， reward %d" % (today, action[i], reward["reward_buy"]))
                     total_steps += 1
-                    if total_steps > 100:
-                        brain.trainQNetwork()
+                    # if total_steps > 100:
+                    #     brain.trainQNetwork()
+
             profit_list.append(self.env.getTotalReward())
-            if game_num % 10 == 0:
-            #     plt.plot()
+            # if game_num % 100 == 0:
+            #     plt.plot(profit_list)
             #     plt.xlabel("game")
             #     plt.ylabel("reward")
             #     plt.savefig('shen/picture/' + "reward" + "_game_" + str(game_num) + '_.png')
             #     plt.cla()
+            #     profit_list = []
+            #     day_list = []
+            if game_num % 10 == 0:
                 print("avg_profit: %f, avg_day %f" % (np.average(profit_list), np.average(day_list)))
 
 
@@ -293,5 +297,5 @@ if __name__ == "__main__":
     # P = TikcetPlay()
     # P.transcation_AC()
     P = TikcetPlay(history_take_off=7, order_num=10)
-    P.train_DQN(max_game=600)
+    P.train_DQN(max_game=1000)
 
